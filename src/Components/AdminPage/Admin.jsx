@@ -47,6 +47,7 @@ const Admin = ({ onLogout }) => {
         const data = await response.json();
         setUsers(Array.isArray(data) ? data : []);
       } catch (error) {
+        notifyError('Error fetching users');
         console.error('Error fetching users:', error);
       }
     };

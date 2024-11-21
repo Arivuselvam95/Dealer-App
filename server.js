@@ -9,8 +9,8 @@ import { ObjectId } from 'mongodb';
 import bcrypt from 'bcrypt';
 
 dotenv.config();
-
-const app = express();
+const saltRounds=10;
+const app = express();895629
 const port = process.env.PORT || 5000;
 
 
@@ -110,7 +110,7 @@ app.post('/api/forgot-password', async (req, res) => {
     // Email content
     const mailOptions = {
       from: {
-        name: 'Titan Dealer App Support',
+        name: 'Dealer App Support',
         address: process.env.EMAIL_USER
       },
       to: user.email,
@@ -199,7 +199,7 @@ app.post('/api/register-user', async (req, res) => {
 
     const mailOptions = {
       from: {
-        name: 'Titan Dealer App Support',
+        name: 'Dealer App Support',
         address: process.env.EMAIL_USER,
       },
       to: email,
@@ -410,7 +410,7 @@ app.post('/api/admin-reset-password', async (req, res) => {
 
     const mailOptions = {
       from: {
-        name: 'Titan Dealer App Support',
+        name: 'Dealer App Support',
         address: process.env.EMAIL_USER,
       },
       to: user.email,
