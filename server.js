@@ -6,6 +6,7 @@ import crypto from 'crypto';
 import { connectToDatabase, getCollection } from './mongodb.js';
 import dotenv from 'dotenv';
 import { ObjectId } from 'mongodb';
+import bcrypt from 'bcrypt';
 
 dotenv.config();
 
@@ -176,7 +177,17 @@ app.post('/api/register-user', async (req, res) => {
     const password = generateRandomPassword();
 
     const usersCollection = getCollection('users_data');
-    await usersCollection.insertOne({ username, password, email, status: status || 'active' });
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+    await usersCollection.insertOne({
+      username,
+      password: hashedPassword, // Store hashed password
+      email,
+      status: status || 'active',
+    });
+
+    // await usersCollection.insertOne({ username, password, email, status: status || 'active' });
 
     // Send email with username and password
     const isEmailConfigValid = await verifyEmailConfig();
@@ -243,11 +254,20 @@ app.post('/api/reset-password', async (req, res) => {
     }
 
     // Update password and clear reset token fields
+    const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
+    // await usersCollection.updateOne(
+    //   { resetPasswordToken: token },
+    //   {
+    //     $set: { password: newPassword },
+    //     $unset: { resetPasswordToken: "", resetPasswordExpires: "" }
+    //   }
+    // );
     await usersCollection.updateOne(
       { resetPasswordToken: token },
       {
-        $set: { password: newPassword },
-        $unset: { resetPasswordToken: "", resetPasswordExpires: "" }
+        $set: { password: hashedPassword },
+        $unset: { resetPasswordToken: "", resetPasswordExpires: "" },
       }
     );
 
@@ -299,20 +319,34 @@ app.get('/api/get-incidents', async (req, res) => {
 
 //register new user in admin page
 app.post('/api/register-user', async (req, res) => {
-  const { username, password, email, status } = req.body;
-  if (!username || !password || !email) {
+  const { username, password, email, status, location, mobile } = req.body;
+
+  // Validate required fields
+  if (!username || !password || !email || !location || !mobile) {
     return res.status(400).json({ message: 'All fields are required' });
   }
 
   try {
+    const hashedPassword = await bcrypt.hash(password, 10); 
     const usersCollection = getCollection('users_data');
-    await usersCollection.insertOne({ username, password, email, status: status || 'active' });
+
+    // Insert user into the database
+    await usersCollection.insertOne({ 
+      username, 
+      password: hashedPassword, 
+      email, 
+      status: status || 'active',
+      location,
+      mobile 
+    });
+
     res.status(201).json({ message: 'User registered successfully' });
   } catch (error) {
     console.error('Error registering user:', error);
     res.status(500).json({ message: 'Failed to register user' });
   }
 });
+
 
 //get users_data in admin
 app.get('/api/get-users', async (req, res) => {
@@ -354,9 +388,16 @@ app.post('/api/admin-reset-password', async (req, res) => {
     const newPassword = generateRandomPassword();
 
     // Update user's password
+    // await usersCollection.updateOne(
+    //   { username },
+    //   { $set: { password: newPassword } }
+    // );
+
+    const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
     await usersCollection.updateOne(
       { username },
-      { $set: { password: newPassword } }
+      { $set: { password: hashedPassword } }
     );
 
     // Send email with the new password
@@ -468,11 +509,19 @@ app.post('/login', async (req, res) => {
   const { username, password } = req.body;
   try {
     const usersCollection = getCollection('users_data');
-    const user = await usersCollection.findOne({ username, password });
+    // const user = await usersCollection.findOne({ username, password });
+    const user = await usersCollection.findOne({ username });
     if (user && user.status === 'active') {
       // console.log(user);
-      const token = jwt.sign({ username }, process.env.JWT_SECRET, { expiresIn: '1h' });
-      res.json({ success: true, token });
+      // const token = jwt.sign({ username }, process.env.JWT_SECRET, { expiresIn: '1h' });
+      // res.json({ success: true, token });
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (isMatch) {
+        const token = jwt.sign({ username }, process.env.JWT_SECRET, { expiresIn: '1h' });
+        return res.json({ success: true, token });
+      }
+      return res.status(401).json({ success: false, message: 'Invalid username or password' });
+
     } else if(user && user.status==='inactive'){
       res.status(401).json({ success: false, message: 'Username is inactive.' });
     }

@@ -71,7 +71,7 @@ const LoginForm = ({ onLogin, helpButton }) => {
         <img className="titan-logo" src={titan_logo} alt="Titan Logo" />
         <div className="scrolling-text">
           <span>
-            <pre>Dealer App         Dealer App         Dealer App         Dealer App         Dealer App         </pre>
+            <pre>Dealer App         Dealer App         Dealer App         Dealer App         Dealer App         Dealer App</pre>
           </span>
         </div>
         <div className="login-container">

@@ -11,6 +11,7 @@ const Admin = ({ onLogout }) => {
   const [refresh, setRefresh] = useState(true);
   const [users, setUsers] = useState([]);
   const [searchQuery, setSearchQuery] = useState(''); // New state for search query
+  const [pendingIncidentId, setPendingIncidentId] = useState(null);
 
   const notifyError = (msg) => toast.error(msg);
   const notify = (msg) => toast.info(msg);
@@ -20,7 +21,10 @@ const Admin = ({ onLogout }) => {
     username: '',
     email: '',
     status: 'active',
+    location: '',
+    mobile: '',
   });
+
 
   useEffect(() => {
     const fetchIncidents = async () => {
@@ -74,7 +78,7 @@ const Admin = ({ onLogout }) => {
       const data = await response.json();
       notify(data.message);
 
-      setNewUser({ username: '', email: '', status: 'active' });
+      setNewUser({ username: '', email: '', status: 'active', location: '', mobile: '' });
       setActiveSection('');
     } catch (error) {
       console.error('Error registering user:', error);
@@ -134,25 +138,31 @@ const Admin = ({ onLogout }) => {
     }
   };
 
-  const toggleChecked = async (id, currentChecked) => {
+  const toggleChecked = async () => {
+    if (!pendingIncidentId) return;
+  
     try {
-      const response = await fetch(`http://localhost:5000/api/update-incident/${id}`, {
+      const response = await fetch(`http://localhost:5000/api/update-incident/${pendingIncidentId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ checked: !currentChecked }),
+        body: JSON.stringify({ checked: true }),
       });
       if (!response.ok) throw new Error('Failed to update incident status');
+  
       setIncidents((prev) =>
         prev.map((incident) =>
-          incident._id === id ? { ...incident, checked: !currentChecked } : incident
+          incident._id === pendingIncidentId ? { ...incident, checked: true } : incident
         )
       );
-      notifySuccess('Incident status updated');
+      setPendingIncidentId(null); // Reset pending incident ID
+      notifySuccess('Incident marked as checked');
+      setActiveSection(''); // Return to the main screen
     } catch (error) {
       console.error('Error updating incident status:', error);
       notifyError('Failed to update status');
     }
   };
+  
 
   const handleImageClick = (screenshot) => {
     setImageShown(screenshot || '');
@@ -183,18 +193,18 @@ const Admin = ({ onLogout }) => {
                   onClick={() => setActiveSection('register')}
                   className="btn-action"
                 >
-                  Register User
+                  Register Dealer
                 </button>
                 <button
                   onClick={() => setActiveSection('manage')}
                   className="btn-action"
                 >
-                  Manage Users
+                  Manage Dealer
                 </button>
               </>
             )}
             <button
-              onClick={() => (activeSection || showImg ? handleBackClick() : onLogout())}
+              onClick={() =>{ (activeSection || showImg ? handleBackClick() : onLogout()); setPendingIncidentId(null); }}
               className="btn-logout"
             >
               {activeSection || showImg ? 'Back' : 'Logout'}
@@ -205,39 +215,58 @@ const Admin = ({ onLogout }) => {
           {/* new users register */}
           {activeSection === 'register' && (
             <div className="register-form">
-              <h2 className="ad-page-title">Register New User</h2>
+              <h2 className="ad-page-title">Register New Dealer</h2>
               
               <form className="login-form" onSubmit={handleRegisterSubmit}>
-                <div className="form-group">
-                  <label>Username</label>
-                  <input
-                    type="text"
-                    value={newUser.username}
-                    onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Email</label>
-                  <input
-                    type="email"
-                    value={newUser.email}
-                    onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <button className="btn-submit" type="submit">
-                    Register
-                  </button>
-                </div>
+                  <div className="form-group">
+                      <label>Username</label>
+                      <input
+                          type="text"
+                          value={newUser.username}
+                          onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
+                          required
+                      />
+                  </div>
+                  <div className="form-group">
+                      <label>Email</label>
+                      <input
+                          type="email"
+                          value={newUser.email}
+                          onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                          required
+                      />
+                  </div>
+                  <div className="form-group">
+                      <label>Location</label>
+                      <input
+                          type="text"
+                          value={newUser.location}
+                          onChange={(e) => setNewUser({ ...newUser, location: e.target.value })}
+                          required
+                      />
+                  </div>
+                  <div className="form-group">
+                      <label>Mobile Number</label>
+                      <input
+                          type="text"
+                          value={newUser.mobile}
+                          onChange={(e) => setNewUser({ ...newUser, mobile: e.target.value })}
+                          required
+                      />
+                  </div>
+                  <div className="form-group">
+                      <button className="btn-submit" type="submit">
+                          Register
+                      </button>
+                  </div>
               </form>
+
             </div>
           )}
           {/* manage users section */}
           {activeSection === 'manage' && (
             <div className="user-management">
-              <h2 className="ad-page-title">User Management</h2>
+              <h2 className="ad-page-title">Dealer Management</h2>
               <div className="users-refresh-container">
                 <div className='search-container'>
                 <label htmlFor="search">Search</label>
@@ -250,9 +279,25 @@ const Admin = ({ onLogout }) => {
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
                 </div>
+                <div className='refresh-container'>
+
+                <button
+                  className="users-refresh-btn"
+                  onClick={() => {
+                    if (pendingIncidentId) {
+                      toggleChecked(); // Toggle the status of the pending incident
+                    } else {
+                      setActiveSection(''); // Navigate back if no pending incident
+                    }
+                  }}
+                >
+                  Done
+                </button>
+
                 <button className="users-refresh-btn" onClick={() => setRefresh(!refresh)}>
                   Refresh
                 </button>
+                </div>
               </div>
               <table>
                 <thead>
@@ -329,9 +374,20 @@ const Admin = ({ onLogout }) => {
                       </td>
                       <td className='actions'>
                         <button style={{backgroundColor: "red"}} onClick={() => deleteIncident(incident._id)}>Delete</button>
-                        <button style={{backgroundColor: incident.checked? "green" : "#2a2af5", width:"90px" }} onClick={() => toggleChecked(incident._id, incident.checked)}>
+                        <button
+                          style={{ backgroundColor: incident.checked ? 'green' : '#2a2af5', width: '90px' }}
+                          onClick={() => {
+                            if (!incident.checked) {
+                              setPendingIncidentId(incident._id); // Track the incident to update
+                              setActiveSection('manage'); // Navigate to Dealer Management
+                            } else {
+                              notify('Incident is already checked');
+                            }
+                          }}
+                        >
                           {incident.checked ? 'Checked' : 'Unchecked'}
                         </button>
+
                       </td>
                     </tr>
                   ))}

@@ -12,7 +12,7 @@
     transform: scale(1.05);
 }
 .users-refresh-btn,.search-input{
-
+    min-width: 70px;
     padding: 5px 10px;
     border: 2px solid white;
     border-radius: 12px;
@@ -53,4 +53,8 @@
 .search-input{
     border-radius: 5px;
     cursor:text;
+}
+.refresh-container{
+    display: flex;
+    gap: 10px;
 }
